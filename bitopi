@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+# Is the environment running
+PSRESULT="$(docker-compose ps -q)"
+if [ ! -z "$PSRESULT" ]; then
+    EXEC="yes"
+else
+    EXEC="no"
+fi
+
+# Create base docker-compose command to run
+COMPOSE="docker-compose -f docker-compose.yml"
+
+if [ $# -gt 0 ]; then
+
+    # initialize bitopi
+    if [ "$1" == "init" ]; then
+        echo "web root directory (default: /var/www/html): "
+        read PUBLIC_DIR
+        if [ "$PUBLIC_DIR" != "/var/www/html" ]; then
+            sed -i "s/root\ \/var\/www\/html/root\ $PUBLIC_DIR/g" ./docker/default
+        fi
+        echo "making bitopi command available without sudo"
+        chmod +x bitopi
+
+        echo ""
+        echo "bitopi initialized!"
+        echo "You are now ready to use bitopi"
+        echo "Try starting it:"
+        echo "./bitopi start"
+
+
+    # Start up containers
+    elif [ "$1" == "start" || "$1" == "up" ]; then
+        $COMPOSE up -d
+
+    # Stop the containers
+    elif [ "$1" == "stop" || "$1" == "down" ]; then
+        $COMPOSE down
+
+    # If "yii" is used 
+    elif [ "$1" == "yii" ]; then
+        shift 1
+        if [ "$EXEC" == "yes" ]; then
+            $COMPOSE exec -u bitopi app php yii "$@"
+        else
+            $COMPOSE run --rm app php yii "$@"
+        fi
+
+    # If "npm" is used, run npm
+    # from our node container
+    elif [ "$1" == "npm" ]; then
+        shift 1
+        if [ "$EXEC" == "yes" ]; then
+            $COMPOSE exec -u bitopi node npm "$@"
+        else
+            $COMPOSE run --rm node npm"$@"
+        fi
+
+    # If "yarn" is used, run yarn
+    # from our node container
+    elif [ "$1" == "yarn" ]; then
+        shift 1
+        if [ "$EXEC" == "yes" ]; then
+            $COMPOSE exec -u bitopi app node yarn "$@"
+        else
+            $COMPOSE run --rm app node yarn"$@"
+        fi
+
+    # Pass everything else to docker
+    else
+    	if [ "$EXEC" == "yes" ]; then
+    		$COMPOSE exec -u bitopi app "$@"
+    	else
+    		$COMPOSE run --rm app "$@"
+    	fi
+    fi
+else
+    # Use the docker-compose ps command if nothing else passed through
+    $COMPOSE ps
+fi

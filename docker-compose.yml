@@ -1,0 +1,16 @@
+version: '3.3'
+
+services:
+  # name must be 'app' here, other wise you have to make changes in this location
+  # ./bitopi line:34
+  app:
+    build: 
+      context: ./docker/
+      dockerfile: Dockerfile
+    image: bitopi/app
+    volumes:
+      - ./:/var/www/html
+    ports:
+    - 8001:80
+
+  # list all other service here ...
